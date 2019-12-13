@@ -286,6 +286,14 @@ class PlayButton(object):
         self.update_fcn()
 
 
+class QuestionBox(object):
+    def __init__(self, title, question):
+        self.text = widgets.HTML(
+            value=f"{question}",
+            placeholder='HTML',
+            description=f"{title}: ",
+        )
+
 
 
 def plot_vector(fig, vector, color='black', arrow_size=0.5, text=True, **kwargs):
@@ -306,7 +314,7 @@ def plot_vector(fig, vector, color='black', arrow_size=0.5, text=True, **kwargs)
              **kwargs)
     
     if isinstance(text, str):
-        alpha = 1.2
+        alpha = 2.5
         end_x = alpha * vector.x[1] + (1-alpha)*vector.x[0]
         end_y = alpha * vector.y[1] + (1-alpha)*vector.y[0]
         ax.text(end_x, end_y, 
@@ -516,6 +524,78 @@ def plot_matrix_rotation(fig, vector, matrix, angle, dp=0):
     ax.set_title(title)
 
 
+def plot_matrix_transformation_eig(fig, vector, matrix, dp=0):
+    matrix = prep_matrix(matrix)
+    I = np.identity(3)
+
+    axesI = get_axes(I)
+    axesT = get_axes(matrix)
+    vectorT = vector.transform(matrix)
+    eigvals, eigvecs = np.linalg.eig(matrix[:2,:2])
+
+    for ew, ev in zip(eigvals, eigvecs.T):
+        if not isinstance(ew, np.complex):
+            vectorI = Vector.from_array(ev)
+            plot_vector(fig, vectorI, 'green', 0.4, f"v: {ew:.2f}")
+
+    plot_vector(fig, vector, 'red', 0.5, True)
+    plot_vector(fig, vectorT, 'blue', 0.5, True)
+
+    if dp == "Both":
+        plot_vector_decompose(fig, vector, axesI, 'red')
+        plot_vector_decompose(fig, vectorT, axesT, 'blue')
+    elif dp == "RED":
+        plot_vector_decompose(fig, vector, axesI, 'red')
+    elif dp == "BLUE":
+        plot_vector_decompose(fig, vectorT, axesT, 'blue')
+
+
+    ax = fig.add_subplot(1,1,1)
+    title = "Matrix Transformation [RED] -> [BLUE]"
+    ax.set_title(title)
+
+def plot_matrix_rotation_eig(fig, vector, matrix, angle, dp=0):
+    matrix[0,0] = np.cos(angle / 180. * np.pi)
+    matrix[0,1] = - np.sin(angle / 180. * np.pi)
+    matrix[1,0] = - matrix[0,1]
+    matrix[1,1] = matrix[0,0]
+    plot_matrix_transformation_eig(fig, vector, matrix, dp=dp)
+
+    ax = fig.add_subplot(1,1,1)
+    title = f"Matrix Rotation (Angle: {angle}) [RED] -> [BLUE]"
+    ax.set_title(title)
+
+def plot_matrix_determinant_eig(fig, vector, matrix, dp=0):
+    matrix = prep_matrix(matrix)
+    I = np.identity(3)
+
+    axesI = get_axes(I)
+    axesT = get_axes(matrix)
+    vectorT = vector.transform(matrix)
+    eigvals, eigvecs = np.linalg.eig(matrix[:2,:2])
+
+    for ew, ev in zip(eigvals, eigvecs.T):
+        if not isinstance(ew, np.complex):
+            vectorI = Vector.from_array(ev)
+            plot_vector(fig, vectorI, 'green', 0.4, f"v: {ew:.2f}")
+
+    plot_vector(fig, vector, 'red', 0.5, True)
+    plot_vector(fig, vectorT, 'blue', 0.5, True)
+
+    det = np.linalg.det(matrix)
+
+    if dp == "Both":
+        plot_vector_decompose(fig, vector, axesI, 'red', patch=True, alpha=1.0)
+        plot_vector_decompose(fig, vectorT, axesT, 'blue', patch=True, alpha=0.5, color2="cyan", det=det)
+    elif dp == "RED":
+        plot_vector_decompose(fig, vector, axesI, 'red', patch=True, alpha=1.0)
+    elif dp == "BLUE":
+        plot_vector_decompose(fig, vectorT, axesT, 'blue', patch=True, alpha=0.5, color2="cyan", det=det)
+
+    ax = fig.add_subplot(1,1,1)
+    title = f"Matrix Determinant = Area[BLUE]/Area[RED] = {det:.2f}"
+    ax.set_title(title)
+
 def plot_matrix_question1(fig, vector, matrix, q1, dp=0):
     angle = q1 / 100 * 360
     plot_matrix_rotation(fig, vector, matrix, angle, dp=dp)
@@ -533,8 +613,32 @@ def plot_matrix_question2(fig, vector, matrix, q2, dp=0):
     title = f"How does the matrix change and \nwhy is the determinant ({det:.2f}) flipping sign (changing color)?"
     ax.set_title(title)
 
+def plot_eig_question1(fig, vector, matrix, q1, dp=0):
+    angle = q1 / 100 * 360
+    plot_matrix_rotation_eig(fig, vector, matrix, angle, dp=dp)
+
+    ax = fig.add_subplot(1,1,1)
+    title = f"Q1: How to form a rotation matrix ?"
+    ax.set_title(title)
+
+def plot_eig_question2(fig, vector, matrix, q2, dp=0):
+    matrix[1,1] = (q2 / 100. * 2)*(-1.) + 1
+    plot_matrix_determinant_eig(fig, vector, matrix, dp=dp)
+
+    det = np.linalg.det(matrix)
+    ax = fig.add_subplot(1,1,1)
+    title = f"How does the matrix change and \nwhy is the determinant ({det:.2f}) flipping sign (changing color)?"
+    ax.set_title(title)
 
 
 
+def final_report(SCORES):
+    sections = ["Addition/Cross Product/Projection",
+                "Transformation/Rotation/Determinant",
+                "Eigenvector/Eigenvalue"]
+    for i, score in enumerate(SCORES):
+        print(f"In section {i+1} - [{sections[i]}], your self reported score is {score}")
 
+    avg_score = np.mean(SCORES)
+    print(f"Your self reported average score on this Linear Algebra review tool is {avg_score:.2f}")
 
